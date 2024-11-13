@@ -6,17 +6,26 @@ import (
     "net"
     "os"
     "time"
+	"sync"
 )
 
 const (
     connHost = "localhost"
     connType = "tcp"
-    token = "123123\n"
-    server = "8080"
+    server_addr = "localhost:8080"
 )
 
+func CheckToken(s string) bool {
+    return s == "123123"
+}
+
 type Peer struct {
+    mu sync.Mutex
+    req []string
+
     self_port string
+
+    server_con net.Conn
 
     prev_l    net.Listener
     prev_conn net.Conn
@@ -28,6 +37,7 @@ type Peer struct {
 func (p *Peer) Close() {
     p.next_conn.Close()
     p.prev_conn.Close()
+    p.server_con.Close()
 }
 
 // Create a new peer to peer connection
@@ -43,7 +53,26 @@ func New(port string, next_addr string) Peer {
         os.Exit(1)
     }
 
-    return Peer {port, l, nil, next_addr, nil}
+    var next_c net.Conn
+    for {
+        var err error
+        next_c,err = net.Dial(connType, server_addr)
+        if err == nil {
+            break
+        }
+        time.Sleep(2 * time.Second)
+        fmt.Println("Error connecting:", err.Error())
+    }
+
+    return Peer {
+        req:[]string{},
+        self_port: port, 
+        server_con: next_c, 
+        prev_l: l, 
+        prev_conn: nil,
+        next_addr: next_addr, 
+        next_conn:nil,
+    }
 }
 
 // wait for someone to connect to us
@@ -56,7 +85,7 @@ func (p *Peer) ConnectNext() {
             break
         }
         fmt.Println("Error connecting:", err.Error())
-        time.Sleep(10 * time.Second)
+        time.Sleep(2 * time.Second)
     }
     p.next_conn = next_c
 }
@@ -73,16 +102,15 @@ func (p *Peer) ConnectPrev() {
             break 
         }
         fmt.Println("Error connecting:", err.Error())
-        time.Sleep(10 * time.Second)
+        time.Sleep(2 * time.Second)
     }
     p.prev_conn = c
     fmt.Println("Client " + p.prev_conn.RemoteAddr().String() + " connected.")
 }
 
 // Infinitly receives message from someone connected to us
-func (p Peer) Loop()  {
+func (p *Peer) Loop()  {
     for {
-        time.Sleep(5 * time.Second) 
 
         if p.prev_conn == nil {
             p.ConnectPrev()
@@ -94,20 +122,50 @@ func (p Peer) Loop()  {
             p.prev_conn = nil
             continue
         }
-	    p.prev_conn.Write([]byte("ok"))
-
 
         message := string(buffer[:len(buffer)-1])
         fmt.Println(message)
-        if message == token{
-            fmt.Println("Token Received")
+        if !CheckToken(message) {
+            continue;
         }
+
+        p.mu.Lock()
+
+        fmt.Println("Token Received")
+
+        for _, value := range p.req {
+            fmt.Println("Sending Req")
+            p.server_con.Write(append([]byte(value), byte('\n')))
+        }
+        p.req = []string{}
+
+        fmt.Println("Requests Sent")
+
+        p.mu.Unlock()
+
+        time.Sleep(2 * time.Second) 
+
 
         if p.next_conn == nil {
             p.ConnectNext()
         }
-        p.next_conn.Write(buffer)
+
+        _, err = p.next_conn.Write(append(buffer, byte('\n')))
+        if err != nil {
+            fmt.Println("Token not sent")
+        }
+
     }
+}
+
+func (p *Peer) Poison() {
+    for {
+        p.mu.Lock()
+        p.req = append(p.req, "abcd abcd")
+        p.mu.Unlock()
+        time.Sleep(2 * time.Second)
+    }
+
 }
 
 func main() {
@@ -117,6 +175,13 @@ func main() {
     }
     p := New(os.Args[1], os.Args[2])
     defer p.Close()
+    fmt.Println("Created peer")
 
-    p.Loop()
+    go p.Poison()
+    fmt.Println("Poisson Loop Initiated")
+
+    go p.Loop()
+    fmt.Println("Token Loop Initiated")
+
+    for {}
 }
