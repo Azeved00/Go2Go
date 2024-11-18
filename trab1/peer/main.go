@@ -7,6 +7,8 @@ import (
     "os"
     "time"
 	"sync"
+    "peer/poisson"
+    "math/rand"
 )
 
 const (
@@ -22,6 +24,7 @@ func CheckToken(s string) bool {
 type Peer struct {
     mu sync.Mutex
     req []string
+    poisson  *poisson.PoissonProcess
 
     self_port string
 
@@ -47,12 +50,14 @@ func (p *Peer) Close() {
 func New(port string, next_addr string) Peer {
     fmt.Println("Starting " + connType + " peer on " + port)
 
+    //set up prev connection
     l, err := net.Listen(connType, connHost+":"+port)
     if err != nil {
         fmt.Println("Error listening:", err.Error())
         os.Exit(1)
     }
 
+    //setup next connection
     var next_c net.Conn
     for {
         var err error
@@ -64,7 +69,14 @@ func New(port string, next_addr string) Peer {
         fmt.Println("Error connecting:", err.Error())
     }
 
+    //setup poisson
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	lambda := 2.0
+
+	poissonProcess, err := poisson.NewPoissonProcess(lambda, rng)
+
     return Peer {
+        poisson: poissonProcess,
         req:[]string{},
         self_port: port, 
         server_con: next_c, 
@@ -161,9 +173,12 @@ func (p *Peer) Loop()  {
 func (p *Peer) Poison() {
     for {
         p.mu.Lock()
-        p.req = append(p.req, "abcd abcd")
+        p.req = append(p.req, "add 3.5 3.5")
         p.mu.Unlock()
-        time.Sleep(2 * time.Second)
+
+
+        waitTime := p.poisson.TimeForNextEvent()
+		time.Sleep(time.Duration(waitTime * float64(time.Second)))
     }
 
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+    "errors"
 )
 
 // Application constants, defining host, port, and protocol.
@@ -14,6 +15,19 @@ const (
 	connPort = "8080"
 	connType = "tcp"
 )
+
+
+type CommandType int32
+const (
+    Add CommandType = 0
+    Mult CommandType = 1
+)
+
+type Command struct {
+    tpe CommandType
+    param1 int32
+    param2 int32
+}
 
 func main() {
 	// Start the server and listen for incoming connections.
@@ -62,6 +76,18 @@ func handleConnection(conn net.Conn) {
             fmt.Println("Error sending response:", err)
             return
         }
+    }
+}
+
+
+func executeCommand(cmd Command) (int32,error) {
+    switch cmd.tpe {
+    case Add:
+        return cmd.param1 + cmd.param2, nil;
+    case Mult:
+        return cmd.param1 + cmd.param2, nil;
+    default:
+        return -1, errors.New("Command not known");
     }
 }
 
