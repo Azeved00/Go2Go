@@ -17,7 +17,9 @@
 
             buildInputs = with pkgs; [ go gopls ];
 
-            shellHook = '''';
+            shellHook = ''
+                alias trab1=$ROOT/trab1/runner.sh
+            '';
         };
     };
 }

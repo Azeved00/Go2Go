@@ -12,9 +12,9 @@ import (
 )
 
 const (
-    connHost = "localhost"
     connType = "tcp"
     server_addr = "localhost:8080"
+    time_limit = 5 * time.Second
 )
 
 func CheckToken(s string) bool {
@@ -22,22 +22,25 @@ func CheckToken(s string) bool {
 }
 
 type Peer struct {
-    mu sync.Mutex
-    req []string
-    poisson  *poisson.PoissonProcess
+    mu          sync.Mutex
+    req         []string
+    poisson     *poisson.PoissonProcess
+    rng         *rand.Rand
 
-    self_port string
+    self_port   string
 
-    server_con net.Conn
+    server_con  net.Conn
 
-    prev_l    net.Listener
-    prev_conn net.Conn
+    prev_l      net.Listener
+    prev_conn   net.Conn
 
-    next_addr string
-    next_conn net.Conn  
+    next_addr   string
+    next_conn   net.Conn  
 }
 
 func (p *Peer) Close() {
+    fmt.Println("exiting")
+
     p.next_conn.Close()
     p.prev_conn.Close()
     p.server_con.Close()
@@ -48,10 +51,11 @@ func (p *Peer) Close() {
 // waits for a peer to be connected to it
 // waits to be connected to a peer
 func New(port string, next_addr string) Peer {
-    fmt.Println("Starting " + connType + " peer on " + port)
+    fmt.Println("Starting " + connType + " peer on port" + port)
 
     //set up prev connection
-    l, err := net.Listen(connType, connHost+":"+port)
+    l, err := net.Listen(connType, "localhost:"+port)
+
     if err != nil {
         fmt.Println("Error listening:", err.Error())
         os.Exit(1)
@@ -77,6 +81,7 @@ func New(port string, next_addr string) Peer {
 
     return Peer {
         poisson: poissonProcess,
+        rng: rng,
         req:[]string{},
         self_port: port, 
         server_con: next_c, 
@@ -89,32 +94,42 @@ func New(port string, next_addr string) Peer {
 
 // wait for someone to connect to us
 func (p *Peer) ConnectNext() {
+    fmt.Println("Looking for a new connection")
+
     var next_c net.Conn
+    ts := time.Now().Add(time_limit)
     for {
         var err error
-        next_c,err = net.Dial(connType, connHost+":"+p.next_addr)
-        if err == nil {
-            break
+        next_c,err = net.Dial(connType, p.next_addr)
+        if err == nil { break }
+
+
+        if time.Now().After(ts) { 
+            fmt.Println("Connection Timed out, exiting program")
+            os.Exit(0) 
         }
-        fmt.Println("Error connecting:", err.Error())
-        time.Sleep(2 * time.Second)
     }
     p.next_conn = next_c
 }
 
 //connect to someone else
 func (p *Peer) ConnectPrev() {
-    fmt.Println("Looking for a new connection")
+    fmt.Println("Waiting For a Connection")
 
     var c net.Conn
     var err error
+    deadline := time.Now().Add(time_limit)
+    p.prev_l.(*net.TCPListener).SetDeadline(deadline)
     for {
         c, err = p.prev_l.Accept()
         if err == nil {
             break 
         }
-        fmt.Println("Error connecting:", err.Error())
-        time.Sleep(2 * time.Second)
+		if opErr, ok := err.(net.Error); ok && opErr.Timeout() {
+            fmt.Println("Waited too long for a connected, exiting...")
+            os.Exit(0)	
+		}
+
     }
     p.prev_conn = c
     fmt.Println("Client " + p.prev_conn.RemoteAddr().String() + " connected.")
@@ -127,6 +142,10 @@ func (p *Peer) Loop()  {
         if p.prev_conn == nil {
             p.ConnectPrev()
         }
+        if p.next_conn == nil {
+            p.ConnectNext()
+        }
+
         buffer, err := bufio.NewReader(p.prev_conn).ReadBytes('\n')
         if err != nil {
             fmt.Println(err)
@@ -158,10 +177,6 @@ func (p *Peer) Loop()  {
         time.Sleep(2 * time.Second) 
 
 
-        if p.next_conn == nil {
-            p.ConnectNext()
-        }
-
         _, err = p.next_conn.Write(append(buffer, byte('\n')))
         if err != nil {
             fmt.Println("Token not sent")
@@ -172,8 +187,13 @@ func (p *Peer) Loop()  {
 
 func (p *Peer) Poison() {
     for {
+
+        param1 := p.rng.Float64()
+        param2 := p.rng.Float64()
+	    cmd := fmt.Sprintf("%f %f", param1, param2)
+
         p.mu.Lock()
-        p.req = append(p.req, "add 3.5 3.5")
+        p.req = append(p.req, cmd)
         p.mu.Unlock()
 
 
@@ -198,5 +218,6 @@ func main() {
     go p.Loop()
     fmt.Println("Token Loop Initiated")
 
-    for {}
+    for {
+    }
 }
