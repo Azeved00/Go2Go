@@ -19,6 +19,7 @@
 
             shellHook = ''
                 alias trab1=$ROOT/trab1/runner.sh
+                alias trab2=$ROOT/trab1/runner.sh
             '';
         };
     };
