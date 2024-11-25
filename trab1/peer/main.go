@@ -6,7 +6,7 @@ import (
     "net"
     "os"
     "time"
-	"sync"
+    "sync"
     "peer/poisson"
     "math/rand"
 )
@@ -167,6 +167,13 @@ func (p *Peer) Loop()  {
         for _, value := range p.req {
             fmt.Println("Sending Req")
             p.server_con.Write(append([]byte(value), byte('\n')))
+            buffer, err := bufio.NewReader(p.server_con).ReadBytes('\n')
+            if err != nil {
+                fmt.Println("Server Error")
+                continue
+            }
+
+            fmt.Printf("res: %s\n", buffer)
         }
         p.req = []string{}
 
@@ -190,7 +197,7 @@ func (p *Peer) Poison() {
 
         param1 := p.rng.Float64()
         param2 := p.rng.Float64()
-	    cmd := fmt.Sprintf("%f %f", param1, param2)
+	    cmd := fmt.Sprintf("add %f %f\n", param1, param2)
 
         p.mu.Lock()
         p.req = append(p.req, cmd)

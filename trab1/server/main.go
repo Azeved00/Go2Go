@@ -21,12 +21,13 @@ type CommandType int32
 const (
     Add CommandType = 0
     Mult CommandType = 1
+    Sub CommandType = 2
 )
 
 type Command struct {
     tpe CommandType
-    param1 int32
-    param2 int32
+    param1 float64
+    param2 float64
 }
 
 func main() {
@@ -67,11 +68,27 @@ func handleConnection(conn net.Conn) {
             return
         }
 
-        // Print response message, stripping newline character.
-        log.Println("Client message:", string(buffer[:len(buffer)-1]))
+        log.Println(" & ", string(buffer[:len(buffer)-1]))
+
+        cmd,err := parseCommand(buffer)
+        if err!= nil {
+            fmt.Println("Error parsing command", err)
+            _, err = conn.Write([]byte("error\n"))
+            return
+        }
+
+        res,err := executeCommand(cmd)
+        if err!= nil {
+            fmt.Println("Error executing command:", err)
+            _, err = conn.Write([]byte("error\n"))
+            return
+        }
+
+        log.Println("-> ", res)
 
         // Send response message to the client.
-        _, err = conn.Write(buffer)
+        s := fmt.Sprintf("%f", res) 
+        _, err = conn.Write([]byte(s))
         if err != nil {
             fmt.Println("Error sending response:", err)
             return
@@ -79,15 +96,46 @@ func handleConnection(conn net.Conn) {
     }
 }
 
+func parseCommand(buffer []byte) (Command,error) {
+    var command string
+    var num1 float64
+    var num2 float64
+    var cmd CommandType
 
-func executeCommand(cmd Command) (int32,error) {
+	input := string(buffer)
+	_, err := fmt.Sscanf(input, "%s %f %f", &command, &num1, &num2)
+    if err != nil {
+        return Command{tpe: Add, param1:0.0, param2:0.0}, err
+    }
+
+    switch command {
+    case "add":
+        cmd = Add
+    case "mult":
+        cmd = Mult
+    case "sub":
+        cmd = Sub
+    default:
+        return Command{tpe: Add, param1:0.0, param2:0.0}, 
+            errors.New("Command not known");
+    }
+
+    return Command{
+        tpe: cmd,
+        param1: num1,
+        param2: num2,
+    }, nil
+
+}
+
+func executeCommand(cmd Command) (float64,error) {
     switch cmd.tpe {
     case Add:
         return cmd.param1 + cmd.param2, nil;
     case Mult:
-        return cmd.param1 + cmd.param2, nil;
+        return cmd.param1 * cmd.param2, nil;
     default:
-        return -1, errors.New("Command not known");
+        return -1.0, errors.New("Command not known");
     }
 }
 
