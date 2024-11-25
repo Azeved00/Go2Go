@@ -87,7 +87,7 @@ func handleConnection(conn net.Conn) {
         log.Println("-> ", res)
 
         // Send response message to the client.
-        s := fmt.Sprintf("%f", res) 
+        s := fmt.Sprintf("%f\n", res) 
         _, err = conn.Write([]byte(s))
         if err != nil {
             fmt.Println("Error sending response:", err)

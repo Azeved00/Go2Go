@@ -173,7 +173,9 @@ func (p *Peer) Loop()  {
                 continue
             }
 
-            fmt.Printf("res: %s\n", buffer)
+
+            response := string(buffer[:len(buffer)-1])
+            fmt.Println("res:", response)
         }
         p.req = []string{}
 
