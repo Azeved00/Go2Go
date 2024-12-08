@@ -75,7 +75,7 @@ func New(port string, next_addr string) Peer {
 
     //setup poisson
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lambda := 2.0
+	lambda := 4.0
 
 	poissonProcess, err := poisson.NewPoissonProcess(lambda, rng)
 
@@ -183,7 +183,7 @@ func (p *Peer) Loop()  {
 
         p.mu.Unlock()
 
-        time.Sleep(2 * time.Second) 
+        time.Sleep(500 * time.Millisecond) 
 
 
         _, err = p.next_conn.Write(append(buffer, byte('\n')))
@@ -196,20 +196,36 @@ func (p *Peer) Loop()  {
 
 func (p *Peer) Poison() {
     for {
-
-        param1 := p.rng.Float64()
-        param2 := p.rng.Float64()
-	    cmd := fmt.Sprintf("add %f %f\n", param1, param2)
-
+        cmd := p.GenCommand()
         p.mu.Lock()
         p.req = append(p.req, cmd)
         p.mu.Unlock()
 
 
         waitTime := p.poisson.TimeForNextEvent()
-		time.Sleep(time.Duration(waitTime * float64(time.Second)))
+		time.Sleep(time.Duration(waitTime * float64(time.Minute)))
     }
+}
 
+func (p *Peer) GenCommand() string {
+        cmdn := p.rng.Int31n(3)
+        cmd := ""
+        switch cmdn {
+        case 0:
+            cmd = "add"
+        case 1:
+            cmd = "sub"
+        case 2:
+            cmd = "mult"
+        default:
+            cmd = "add"
+
+        }
+        param1 := p.rng.NormFloat64()
+        param2 := p.rng.NormFloat64()
+        
+	    command := fmt.Sprintf("%s %f %f\n",cmd, param1, param2)
+        return command
 }
 
 func main() {
@@ -217,7 +233,11 @@ func main() {
         fmt.Println("Usage: " + os.Args[0] + " <machine addr> " + " <addr to connect to>")
         return
     }
+
     p := New(os.Args[1], os.Args[2])
+
+
+
     defer p.Close()
     fmt.Println("Created peer")
 

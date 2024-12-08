@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 
-go="GOWORK=\"$ROOT/trab1/go.work\" go"
+go="GOWORK=\"$ROOT/trab2/go.work\" go"
 
 server="$go run $ROOT/trab1/server/main.go 8080"
 
+# m1 - m2
+# m3 - m2
+# m2 - m4
+# m6 - m4 trab1
+# m5 - m4
 peer1="$go run $ROOT/trab1/peer/main.go 8081 localhost:8085"
 peer2="$go run $ROOT/trab1/peer/main.go 8082 localhost:8081"
 peer3="$go run $ROOT/trab1/peer/main.go 8083 localhost:8082"
