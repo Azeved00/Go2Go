@@ -1,12 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"net"
-	"os"
+    "time"
+    "bufio"
+    "fmt"
+    "log"
+    "net"
+    "os"
     "errors"
+    "sync/atomic"
 )
 
 // Application constants, defining host, port, and protocol.
@@ -14,6 +16,7 @@ const (
 	connHost = "localhost"
 	connPort = "8080"
 	connType = "tcp"
+    time_limit = 30 * time.Second
 )
 
 
@@ -30,6 +33,8 @@ type Command struct {
     param2 float64
 }
 
+var conn_counter atomic.Int32
+
 func main() {
 	// Start the server and listen for incoming connections.
 	fmt.Println("Starting " + connType + " server on " + connHost + ":" + connPort)
@@ -38,17 +43,28 @@ func main() {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
-	// Close the listener when the application closes.
 	defer l.Close()
 
-	// run loop forever, until exit.
+
+    conned := true
 	for {
-		// Listen for an incoming connection.
+        deadline := time.Now().Add(time_limit)
+        l.(*net.TCPListener).SetDeadline(deadline)
 		c, err := l.Accept()
 		if err != nil {
-			fmt.Println("Error connecting:", err.Error())
-			return
+            fmt.Println("Error connecting:", err.Error())
+
+            if conned && conn_counter.Load() == 0 {
+                conned = false
+            }
+            if !conned && conn_counter.Load() == 0 {
+                fmt.Println("No connections detected for a while, commiting seppuku")
+                os.Exit(0)
+            }
+
+            continue
 		}
+       
 		fmt.Println("Client connected.")
 
 		// Print client connection address.
@@ -60,11 +76,14 @@ func main() {
 }
 
 func handleConnection(conn net.Conn) {
+    conn_counter.Add(1)
+
     for {
         // Buffer client input until a newline.
         buffer, err := bufio.NewReader(conn).ReadBytes('\n')
         if err != nil {
-            fmt.Println("Client left.")
+            conn_counter.Add(-1)
+            fmt.Printf("Client left, %d connections left.\n", conn_counter.Load())
             return
         }
 

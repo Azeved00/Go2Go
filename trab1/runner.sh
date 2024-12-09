@@ -4,11 +4,11 @@ go="GOWORK=\"$ROOT/trab1/go.work\" go"
 
 server="$go run $ROOT/trab1/server/main.go 8080"
 
-peer1="$go run $ROOT/trab1/peer/main.go 8081 localhost:8085"
-peer2="$go run $ROOT/trab1/peer/main.go 8082 localhost:8081"
-peer3="$go run $ROOT/trab1/peer/main.go 8083 localhost:8082"
-peer4="$go run $ROOT/trab1/peer/main.go 8084 localhost:8083"
-peer5="$go run $ROOT/trab1/injector/main.go localhost:8081 && $go run $ROOT/trab1/peer/main.go 8085 localhost:8084"
+peer1="$go run $ROOT/trab1/peer/main.go -p 8081 -n 8082 localhost"
+peer2="$go run $ROOT/trab1/peer/main.go -p 8082 -n 8083 localhost"
+peer3="$go run $ROOT/trab1/peer/main.go -p 8083 -n 8084 localhost"
+peer4="$go run $ROOT/trab1/peer/main.go -p 8084 -n 8085 localhost"
+peer5="$go run $ROOT/trab1/injector/main.go localhost:8081 && $go run $ROOT/trab1/peer/main.go -p 8085 -n 8081 localhost"
 
 # Check the number of panes in the current window
 pane_count=$(tmux list-panes | wc -l)
