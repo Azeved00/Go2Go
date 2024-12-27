@@ -1,5 +1,3 @@
 go 1.23.2
 
 use ./peer
-use ./injector
-use ./server
