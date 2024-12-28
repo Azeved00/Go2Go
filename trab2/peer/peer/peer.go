@@ -15,6 +15,7 @@ import (
 const (
     connType = "tcp"
     time_limit = 10 * time.Second
+    lambda = 5.0
 )
 
 type Peer struct {
@@ -24,7 +25,7 @@ type Peer struct {
     self_port   string
     listener    net.Listener
 
-    conns       map[net.Addr]net.Conn
+    conns       map[string]net.Conn
     peer_map    pmap.PMap
 	peer_map_mutex sync.Mutex
 }
@@ -53,7 +54,6 @@ func New(port string) Peer {
 
     //setup poisson
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	lambda := 4.0
 
 	poissonProcess, err := poisson.NewPoissonProcess(lambda, rng)
     
@@ -62,20 +62,27 @@ func New(port string) Peer {
         rng: rng,
         self_port: port, 
         listener: l, 
-        peer_map: pmap.NewPeerMap(),
-        conns: map[net.Addr]net.Conn{},
+        peer_map: pmap.NewPeerMap("localhost:"+port),
+        conns: map[string]net.Conn{},
     }
 }
 
 // wait for someone to connect to us
 func (p *Peer) ConnectTo(next_addr string) {
-    fmt.Println("Trying to connect to next peer("+next_addr+")")
+    if p.conns[next_addr] != nil {
+        p.peer_map.UpdatePeer(next_addr)
+        return
+    }
+
+    fmt.Println("",p.conns)
+    fmt.Println("Trying to connect to next peer: "+next_addr)
 
     var next_c net.Conn
     ts := time.Now().Add(time_limit)
     for {
         var err error
         next_c,err = net.Dial(connType, next_addr)
+        
         if err == nil { break }
 
 
@@ -84,7 +91,9 @@ func (p *Peer) ConnectTo(next_addr string) {
             os.Exit(0) 
         }
     }
-    p.peer_map.UpdatePeer(next_c)
+
+    p.conns[next_addr] = next_c
+    p.peer_map.UpdatePeer(next_addr)
 }
 
 func (p *Peer) Listen() {
@@ -102,23 +111,23 @@ func (p *Peer) Listen() {
 }
 
 func (p *Peer) handleCon(conn net.Conn) {
-    p.conns[conn.RemoteAddr()] = conn
-    p.peer_map.UpdatePeer(conn)
-
 	fmt.Println("New client connected:", conn.RemoteAddr())
 
 	// Read messages from the client
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
-		msg := scanner.Text()
-		fmt.Println("Received from client:", msg)
+		msg := scanner.Bytes()
 
-		// Echo the message back to the client
-		_, err := conn.Write([]byte("Server: " + msg + "\n"))
-		if err != nil {
-			fmt.Println("Error writing to client:", err)
-			break
-		}
+        pmap,err := pmap.Deserialize(msg)
+        if err != nil {
+            fmt.Println("Failed to serialize")
+            continue
+        }
+        p.ConnectTo(pmap.Addr)
+        fmt.Println("merging serialization")
+        p.peer_map.Merge(pmap)
+        fmt.Println("", p.peer_map.PrettyPrint())
+
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -126,31 +135,37 @@ func (p *Peer) handleCon(conn net.Conn) {
 	}
 
 	fmt.Println("Client disconnected:", conn.RemoteAddr())
-    delete(p.conns, conn.RemoteAddr())
-    p.conns[conn.RemoteAddr()] = conn
     conn.Close()
 }
 
 
 func (p *Peer) Poison() {
     for {
-        //fmt.Printf("%s\n",p.peer_map.PrettyPrint())
         message, err := p.peer_map.Serialize()
         if err != nil {
             fmt.Printf("%s\n",err)
             continue
         }
 
-        fmt.Printf("%s\n",message)
-        for addr, conn := range p.conns {
-            fmt.Printf("Sending message to %s...\n", addr)
+        keys := make([]string, 0, len(p.conns))
+        for key := range p.conns {
+            keys = append(keys, key)
+        }
+        if len(keys) <= 0 {
+            continue
+        }
 
-            _, err := conn.Write(message)
-            if err != nil {
-                fmt.Printf("Failed to send message %v\n", err)
-                continue
-            }
-            break
+        randomIndex := p.rng.Intn(len(keys))
+        addr := keys[randomIndex]
+
+        conn := p.conns[addr]
+
+        fmt.Printf("Sending message to %s...\n", addr)
+
+        _, err = conn.Write(message)
+        if err != nil {
+            fmt.Printf("Failed to send message %v\n", err)
+            continue
         }
 
         waitTime := p.poisson.TimeForNextEvent()
