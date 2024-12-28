@@ -3,46 +3,34 @@ package main
 import (
     "fmt"
     "flag"
-    "os"
     "strconv"
     "p2p/peer"
 )
 
 const (
-    default_server_addr = "localhost:8080"
     default_peer_port = 8180
 )
 
 func main() {
 	peer_port := flag.Int("p", default_peer_port, "Port where peer will listen")
-    next_peer_port := flag.Int("n", default_peer_port, "Port wich this peer will connect to")
-    server_addr := flag.String("s", default_server_addr, "Address of the server")
+	address := flag.String("n", "", "Address to connect to (e.g., localhost:8080)")
 	flag.Parse()
 
-	args := flag.Args()
-
-    if len(args) < 1 {
-		fmt.Println("Error: Two required parameters are missing.")
-        fmt.Println("Usage: " + os.Args[0] + "[flags] <addr to connect to>")
-		os.Exit(1)
-    }
-
-
-    p := peer.New(
-            strconv.Itoa(*peer_port), 
-            args[0]+":"+strconv.Itoa(*next_peer_port),
-            *server_addr)
-
-
+    p := peer.New(strconv.Itoa(*peer_port))
+    fmt.Println("Created peer")
 
     defer p.Close()
-    fmt.Println("Created peer")
+
+    go p.Listen()
+    fmt.Println("Listening for Connections")
+
+	if *address != "" {
+        p.ConnectTo(*address)
+	}
+
 
     go p.Poison()
     fmt.Println("Poisson Loop Initiated")
-
-    go p.Loop()
-    fmt.Println("Token Loop Initiated")
 
     for { }
 }

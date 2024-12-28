@@ -6,9 +6,10 @@ import (
     "net"
     "os"
     "time"
-    "sync"
     "p2p/poisson"
+    "p2p/pmap"
     "math/rand"
+    "sync"
 )
 
 const (
@@ -16,40 +17,30 @@ const (
     time_limit = 10 * time.Second
 )
 
-func CheckToken(s string) bool {
-    return s == "123123"
-}
-
 type Peer struct {
-    mu          sync.Mutex
-    req         []string
     poisson     *poisson.PoissonProcess
     rng         *rand.Rand
 
     self_port   string
+    listener    net.Listener
 
-    server_con  net.Conn
-
-    prev_l      net.Listener
-    prev_conn   net.Conn
-
-    next_addr   string
-    next_conn   net.Conn  
+    conns       map[net.Addr]net.Conn
+    peer_map    pmap.PMap
+	peer_map_mutex sync.Mutex
 }
 
 func (p *Peer) Close() {
     fmt.Println("exiting")
-
-    p.next_conn.Close()
-    p.prev_conn.Close()
-    p.server_con.Close()
+	for _, conn := range p.conns {
+		conn.Close()
+	}
 }
 
 // Create a new peer to peer connection
 // the 'port' parameter is fo r
 // waits for a peer to be connected to it
 // waits to be connected to a peer
-func New(port string, next_addr string, server_addr string) Peer {
+func New(port string) Peer {
     fmt.Println("Starting " + connType + " peer on port " + port)
 
     //set up prev connection
@@ -60,46 +51,31 @@ func New(port string, next_addr string, server_addr string) Peer {
         os.Exit(1)
     }
 
-    //setup next connection
-    var next_c net.Conn
-    for {
-        var err error
-        next_c,err = net.Dial(connType, server_addr)
-        if err == nil {
-            break
-        }
-        time.Sleep(2 * time.Second)
-        fmt.Println("Error connecting:", err.Error())
-    }
-
     //setup poisson
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	lambda := 4.0
 
 	poissonProcess, err := poisson.NewPoissonProcess(lambda, rng)
-
+    
     return Peer {
         poisson: poissonProcess,
         rng: rng,
-        req:[]string{},
         self_port: port, 
-        server_con: next_c, 
-        prev_l: l, 
-        prev_conn: nil,
-        next_addr: next_addr, 
-        next_conn:nil,
+        listener: l, 
+        peer_map: pmap.NewPeerMap(),
+        conns: map[net.Addr]net.Conn{},
     }
 }
 
 // wait for someone to connect to us
-func (p *Peer) ConnectNext() {
-    fmt.Println("Trying to connect to next peer("+p.next_addr+")")
+func (p *Peer) ConnectTo(next_addr string) {
+    fmt.Println("Trying to connect to next peer("+next_addr+")")
 
     var next_c net.Conn
     ts := time.Now().Add(time_limit)
     for {
         var err error
-        next_c,err = net.Dial(connType, p.next_addr)
+        next_c,err = net.Dial(connType, next_addr)
         if err == nil { break }
 
 
@@ -108,122 +84,77 @@ func (p *Peer) ConnectNext() {
             os.Exit(0) 
         }
     }
-    p.next_conn = next_c
+    p.peer_map.UpdatePeer(next_c)
 }
 
-//connect to someone else
-func (p *Peer) ConnectPrev() {
-    fmt.Println("Waiting For previous peer to connect")
-
-    var c net.Conn
-    var err error
-    deadline := time.Now().Add(time_limit)
-    p.prev_l.(*net.TCPListener).SetDeadline(deadline)
-    for {
-        c, err = p.prev_l.Accept()
-        if err == nil {
-            break 
-        }
-		if opErr, ok := err.(net.Error); ok && opErr.Timeout() {
-            fmt.Println("Waited too long for a connected, exiting...")
-            os.Exit(0)	
+func (p *Peer) Listen() {
+	for {
+		// Accept a new connection
+		conn, err := p.listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
 		}
 
-    }
-    p.prev_conn = c
-    fmt.Println("Client " + p.prev_conn.RemoteAddr().String() + " connected.")
+		// Handle the connection in a separate goroutine
+		go p.handleCon(conn)
+	}
 }
 
-// Infinitly receives message from someone connected to us
-func (p *Peer) Loop()  {
-    for {
+func (p *Peer) handleCon(conn net.Conn) {
+    p.conns[conn.RemoteAddr()] = conn
+    p.peer_map.UpdatePeer(conn)
 
-        if p.prev_conn == nil {
-            p.ConnectPrev()
-        }
-        if p.next_conn == nil {
-            p.ConnectNext()
-        }
+	fmt.Println("New client connected:", conn.RemoteAddr())
 
-        buffer, err := bufio.NewReader(p.prev_conn).ReadBytes('\n')
-        if err != nil {
-            fmt.Println(err)
-            p.prev_conn.Close()
-            p.prev_conn = nil
-            continue
-        }
+	// Read messages from the client
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		fmt.Println("Received from client:", msg)
 
-        message := string(buffer[:len(buffer)-1])
-        fmt.Println(message)
-        if !CheckToken(message) {
-            continue;
-        }
+		// Echo the message back to the client
+		_, err := conn.Write([]byte("Server: " + msg + "\n"))
+		if err != nil {
+			fmt.Println("Error writing to client:", err)
+			break
+		}
+	}
 
-        p.mu.Lock()
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Connection error:", err)
+	}
 
-        fmt.Println("Token Received")
-
-        for _, value := range p.req {
-            fmt.Println("Sending Req")
-            p.server_con.Write(append([]byte(value), byte('\n')))
-            buffer, err := bufio.NewReader(p.server_con).ReadBytes('\n')
-            if err != nil {
-                fmt.Println("Server Error")
-                continue
-            }
-
-
-            response := string(buffer[:len(buffer)-1])
-            fmt.Println("res:", response)
-        }
-        p.req = []string{}
-
-        fmt.Println("Requests Sent")
-
-        p.mu.Unlock()
-
-        time.Sleep(500 * time.Millisecond) 
-
-
-        _, err = p.next_conn.Write(append(buffer, byte('\n')))
-        if err != nil {
-            fmt.Println("Token not sent")
-        }
-
-    }
+	fmt.Println("Client disconnected:", conn.RemoteAddr())
+    delete(p.conns, conn.RemoteAddr())
+    p.conns[conn.RemoteAddr()] = conn
+    conn.Close()
 }
+
 
 func (p *Peer) Poison() {
     for {
-        cmd := p.GenCommand()
-        p.mu.Lock()
-        p.req = append(p.req, cmd)
-        p.mu.Unlock()
+        //fmt.Printf("%s\n",p.peer_map.PrettyPrint())
+        message, err := p.peer_map.Serialize()
+        if err != nil {
+            fmt.Printf("%s\n",err)
+            continue
+        }
 
+        fmt.Printf("%s\n",message)
+        for addr, conn := range p.conns {
+            fmt.Printf("Sending message to %s...\n", addr)
+
+            _, err := conn.Write(message)
+            if err != nil {
+                fmt.Printf("Failed to send message %v\n", err)
+                continue
+            }
+            break
+        }
 
         waitTime := p.poisson.TimeForNextEvent()
 		time.Sleep(time.Duration(waitTime * float64(time.Minute)))
     }
-}
-
-func (p *Peer) GenCommand() string {
-        cmdn := p.rng.Int31n(3)
-        cmd := ""
-        switch cmdn {
-        case 0:
-            cmd = "add"
-        case 1:
-            cmd = "sub"
-        case 2:
-            cmd = "mult"
-        default:
-            cmd = "add"
-
-        }
-        param1 := p.rng.NormFloat64()
-        param2 := p.rng.NormFloat64()
-        
-	    command := fmt.Sprintf("%s %f %f\n",cmd, param1, param2)
-        return command
 }
 

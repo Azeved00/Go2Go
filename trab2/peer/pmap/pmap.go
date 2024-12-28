@@ -2,13 +2,14 @@ package pmap
 
 import (
 	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"time"
+    "net"
 )
 
 // StringToTimestampMap represents a map from string to timestamps.
-type PMap map[string]time.Time
+type PMap map[net.Addr]time.Time
 
 // Merge combines two StringToTimestampMap structures.
 // If the same key exists in both, the latest timestamp is used.
@@ -30,35 +31,60 @@ func (m PMap) PrettyPrint() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("{\n")
 	for key, value := range m {
-		buffer.WriteString(fmt.Sprintf("  %q: %q,\n", key, value.Format(time.RFC3339)))
+		buffer.WriteString(fmt.Sprintf("  %q: %q,\n", key, value))
 	}
 	buffer.WriteString("}")
 	return buffer.String()
 }
 
-// Serialize serializes the map to a byte slice using Gob encoding.
+type SerializedPMap struct {
+	Address  string    `json:"address"`
+	Timestamp string    `json:"timestamp"`
+}
 func (m PMap) Serialize() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	err := encoder.Encode(m)
-	if err != nil {
-		return nil, err
+	var serializedEntries []SerializedPMap
+
+	for key, entry := range m {
+		serializedEntry := SerializedPMap{
+			Address:  key.String(),
+			Timestamp: entry.Format(time.RFC3339), 	
+        }
+		serializedEntries = append(serializedEntries, serializedEntry)
 	}
-	return buf.Bytes(), nil
+
+	// Convert the serialized entries to JSON
+	return json.Marshal(serializedEntries)
 }
 
-// Deserialize reconstructs a StringToTimestampMap from a byte slice using Gob encoding.
+
 func Deserialize(data []byte) (PMap, error) {
-	buf := bytes.NewBuffer(data)
-	decoder := gob.NewDecoder(buf)
-	var result PMap
-	err := decoder.Decode(&result)
+	var serializedEntries []SerializedPMap
+	err := json.Unmarshal(data, &serializedEntries)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+
+	deserializedMap := make(PMap)
+	for _, entry := range serializedEntries {
+		addr, err := net.ResolveTCPAddr("tcp", entry.Address) // Assuming TCPAddr for simplicity
+		if err != nil {
+			return nil, fmt.Errorf("error resolving address: %v", err)
+		}
+
+		parsedTime, _ := time.Parse(time.RFC3339, entry.Timestamp)
+		deserializedMap[addr] = parsedTime
+	}
+
+	return deserializedMap, nil
 }
 
-func (m *PMap) UpdatePeer(peer string) {
-    (*m)[peer] = time.Now()
+func NewPeerMap() PMap {
+    return make(map[net.Addr] time.Time)
+}
+
+func (m *PMap) UpdatePeer(peer net.Conn) {
+    (*m)[peer.RemoteAddr()] = time.Now()
+}
+func (m *PMap) DeletePeer(peer net.Conn) {
+    defer  delete(*m, peer.RemoteAddr())
 }
