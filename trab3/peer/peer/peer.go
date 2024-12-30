@@ -14,8 +14,8 @@ import (
 const (
     connType = "tcp"
     time_limit = 10 * time.Second
+    shutdown_limit = 15 * time.Second
     lambda = 0.2
-
 )
 var peer_addresses = [6]string{
     "localhost:8081", 
@@ -39,7 +39,7 @@ type Peer struct {
     self_port   string
     listener    net.Listener
 
-    conns       map[string]*gob.Encoder
+    conns       ConnMap
     clock       lamport.LampClock
 
     p_heap      ProcessHeap
@@ -73,29 +73,30 @@ func New(port string) *Peer {
         rng: rng,
         self_port: port, 
         listener: l, 
-        conns: map[string]*gob.Encoder{},
         clock: lamport.NewLamportClock("localhost:"+port),
+        conns: NewConnMap(),
     }
     for _, addr := range peer_addresses {
-        go peer.ConnectTo(addr)
+        go peer.ConnectTo(addr, false)
     }
     
     return &peer
 }
 
 // wait for someone to connect to us
-func (p *Peer) ConnectTo(next_addr string) {
-    if p.conns[next_addr] != nil {
+func (p *Peer) ConnectTo(next_addr string, reset bool) {
+    if reset {
+        p.conns.Set(next_addr, nil)
+    }
+    if  p.conns.Exists(next_addr) {
         return
     }
-
     //fmt.Println("",p.conns)
     fmt.Println("Trying to connect to next peer: "+next_addr)
 
     var enc *gob.Encoder 
     ts := time.Now().Add(time_limit)
     for {
-        var err error
         conn, err := net.Dial(connType, next_addr)
         enc = gob.NewEncoder(conn)
         
@@ -108,7 +109,7 @@ func (p *Peer) ConnectTo(next_addr string) {
         }
     }
 
-    p.conns[next_addr] = enc
+    p.conns.Set(next_addr, enc)
 }
 
 func (p *Peer) Listen() {
@@ -137,8 +138,9 @@ func (p *Peer) handleCon(conn net.Conn) {
 	for {
         var message Message
 		err := decoder.Decode(&message)
+        fmt.Println("Received a message")
 	    if err != nil {
-			fmt.Printf("Connection closed or error: %v", err)
+			fmt.Printf("Connection closed or error: %v\n", err)
 			break
 		}
 
@@ -147,17 +149,13 @@ func (p *Peer) handleCon(conn net.Conn) {
             fmt.Println("Failed to serialize lamport clock", err)
             continue
         }
-        p.clock.Merge(&clock)
-        c := p.clock.Get()
+        c := clock.Get()
 
         p.p_heap.Push(HeapObj {
             Counter: c,
             Word: message.Word,
+            Addr: clock.Addr,
         })
-
-        //fmt.Println("merging serialization")
-        p.clock.Merge(&clock)
-
 	}
 
 	fmt.Println("Client disconnected:", conn.RemoteAddr())
@@ -179,12 +177,15 @@ func (p *Peer) Poison() {
 		    Clock_ser: ser_clock,
 	    }
 
-        for _, enc := range p.conns {
-            if err := enc.Encode(message); err != nil {
-                fmt.Printf("Failed to encode: %v", err)
+        addrs := p.conns.GetKeys()
+        fmt.Println(addrs)
+        for _, addr := range addrs {
+            if p.conns.Send(addr, message) {
+                continue
+            } else {
+                go p.ConnectTo(addr, true)
             }
         }
-
 
         waitTime := p.poisson.TimeForNextEvent()
 		time.Sleep(time.Duration(waitTime * float64(time.Second)))
@@ -203,9 +204,29 @@ func (p *Peer) ProcessQueue() {
 	    } else {
             item := p.p_heap.Pop()
 
+            clock := lamport.LampClock {
+                Counter: item.Counter,
+                Addr: item.Addr,
+            }
+            p.clock.Merge(&clock)
+
+
+            fmt.Println(clock.PrettyPrint())
             fmt.Println(p.clock.PrettyPrint())
             fmt.Println(item.Word)
         }
     }
 }
 
+func (p *Peer) DeadLine() {
+    flag := false
+    for {
+        l :=  p.conns.Len()
+        if l == 0 && flag {
+            os.Exit(0)
+        }
+        flag = l == 0
+
+		time.Sleep(time.Duration(shutdown_limit))
+    }
+}
