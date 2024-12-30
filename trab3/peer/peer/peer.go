@@ -104,7 +104,7 @@ func (p *Peer) ConnectTo(next_addr string, reset bool) {
 
 
         if time.Now().After(ts) { 
-            fmt.Println("Connection Timed out, exiting program")
+            fmt.Println("Connection Timed out, will not try again:", next_addr)
             return
         }
     }
@@ -178,7 +178,6 @@ func (p *Peer) Poison() {
 	    }
 
         addrs := p.conns.GetKeys()
-        fmt.Println(addrs)
         for _, addr := range addrs {
             if p.conns.Send(addr, message) {
                 continue

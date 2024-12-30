@@ -1,6 +1,7 @@
 package main
 
 import (
+    "time"
     "fmt"
     "flag"
     "strconv"
@@ -29,5 +30,7 @@ func main() {
     go p.ProcessQueue()
     fmt.Println("Starting processing the queue")
 
-    for { }
+    time.Sleep(time.Duration(3 * time.Minute))
+    fmt.Println("Program finished time limit, exiting")
+    return 
 }

@@ -5,6 +5,7 @@ import (
     "flag"
     "strconv"
     "p2p/peer"
+    "time"
 )
 
 const (
@@ -32,5 +33,7 @@ func main() {
     go p.Poison()
     fmt.Println("Poisson Loop Initiated")
 
-    for { }
+    time.Sleep(time.Duration(3 * time.Minute))
+    fmt.Println("Program finished time limit, exiting")
+    return 
 }
