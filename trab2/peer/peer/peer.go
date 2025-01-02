@@ -45,7 +45,7 @@ func New(port string) Peer {
     fmt.Println("Starting " + connType + " peer on port " + port)
 
     //set up prev connection
-    l, err := net.Listen(connType, "localhost:"+port)
+    l, err := net.Listen(connType, "0.0.0.0:"+port)
 
     if err != nil {
         fmt.Println("Error listening:", err.Error())
