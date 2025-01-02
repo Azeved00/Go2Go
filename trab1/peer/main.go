@@ -6,6 +6,7 @@ import (
     "os"
     "strconv"
     "p2p/peer"
+    "time"
 )
 
 const (
@@ -44,5 +45,7 @@ func main() {
     go p.Loop()
     fmt.Println("Token Loop Initiated")
 
-    for { }
+    time.Sleep(time.Duration(3 * time.Minute))
+    fmt.Println("Program finished time limit, exiting")
+    return 
 }

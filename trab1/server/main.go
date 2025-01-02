@@ -100,7 +100,6 @@ func handleConnection(conn net.Conn) {
         if err!= nil {
             fmt.Println("Error executing command:", err)
             _, err = conn.Write([]byte("error\n"))
-            return
         }
 
         log.Println("-> ", res)
@@ -151,6 +150,8 @@ func executeCommand(cmd Command) (float64,error) {
     switch cmd.tpe {
     case Add:
         return cmd.param1 + cmd.param2, nil;
+    case Sub:
+        return cmd.param1 - cmd.param2, nil;
     case Mult:
         return cmd.param1 * cmd.param2, nil;
     default:

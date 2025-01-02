@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-work_dir="$ROOT/trab3"
+work_dir="$PWD/trab3"
 go="GOWORK=\"$work_dir/go.work\" go"
 
 peer0="$go run $work_dir/peer/main.go -p 8081"

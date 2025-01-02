@@ -21,11 +21,11 @@ func main() {
         conn, err := net.Dial(connType, port)
         if err == nil {
             fmt.Println("Sending Token")
-            // Send to socket connection.
             conn.Write([]byte(token))
-
             conn.Close()
+            break
         }
+
         fmt.Println("Couldn't Connect, trying again")
     }
     
