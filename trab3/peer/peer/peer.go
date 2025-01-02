@@ -57,7 +57,7 @@ func New(port string) *Peer {
     fmt.Println("Starting " + connType + " peer on port " + port)
 
     //set up prev connection
-    l, err := net.Listen(connType, "localhost:"+port)
+    l, err := net.Listen(connType, "0.0.0.0:"+port)
 
     if err != nil {
         fmt.Println("Error listening:", err.Error())
@@ -73,7 +73,7 @@ func New(port string) *Peer {
         rng: rng,
         self_port: port, 
         listener: l, 
-        clock: lamport.NewLamportClock("localhost:"+port),
+        clock: lamport.NewLamportClock("0.0.0.0:"+port),
         conns: NewConnMap(),
     }
     for _, addr := range peer_addresses {
