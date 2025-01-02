@@ -13,10 +13,10 @@ import (
 
 // Application constants, defining host, port, and protocol.
 const (
-	connHost = "localhost"
+	connHost = "0.0.0.0"
 	connPort = "8080"
 	connType = "tcp"
-    time_limit = 30 * time.Second
+	time_limit = 30 * time.Second
 )
 
 
