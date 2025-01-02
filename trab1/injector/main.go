@@ -17,15 +17,17 @@ func main() {
 
     // Start the client and connect to the server.
 	fmt.Println("Connecting to", connType, "server", port)
-	conn, err := net.Dial(connType, port)
-	if err != nil {
-		fmt.Println("Error connecting:", err.Error())
-		os.Exit(1)
-	}
-    
-    fmt.Println("Sending Token")
-    // Send to socket connection.
-    conn.Write([]byte(token))
+    for {
+        conn, err := net.Dial(connType, port)
+        if err == nil {
+            fmt.Println("Sending Token")
+            // Send to socket connection.
+            conn.Write([]byte(token))
 
-    conn.Close()
+            conn.Close()
+        }
+        fmt.Println("Couldn't Connect, trying again")
+    }
+    
+
 }
