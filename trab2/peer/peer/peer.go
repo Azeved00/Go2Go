@@ -148,6 +148,7 @@ func (p *Peer) Poison() {
         }
 
         keys := make([]string, 0, len(p.conns))
+        fmt.Println("Conns to send:", keys)
         for key := range p.conns {
             keys = append(keys, key)
         }
