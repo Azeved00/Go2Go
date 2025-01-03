@@ -18,3 +18,21 @@ Furthermore, there is an optional flag,
 
 The program is set up to turn it self off after 3 minutes.
 
+## Usage Example
+
+This example includes 6 peers, who are known a priori, all running on the same machine.
+
+Do note that for this program to work you have to change the list `peer_addresses` in the file [peer/peer/peer.go](./peer/peer/peer.go)
+
+```go run peer/main.go -p 8081 localhost```
+
+```go run peer/main.go -p 8082 localhost```
+
+```go run peer/main.go -p 8083 localhost```
+
+```go run peer/main.go -p 8084 localhost```
+
+```go run peer/main.go -p 8085 localhost```
+
+```go run peer/main.go -p 8086 localhost```
+

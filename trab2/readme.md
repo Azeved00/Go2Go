@@ -26,3 +26,19 @@ if no address is given then the peer will only wait for connections,
 
 The program is set up to turn it self off after 3 minutes.
 
+## Usage Example
+
+This example includes 6 different peers arranged in a 2-1-1-2 network, all in the same machine:
+
+```go run peer/main.go -p 8081 -n localhost:8083 localhost```
+
+```go run peer/main.go -p 8082 -n localhost:8083 localhost```
+
+```go run peer/main.go -p 8083 -n localhost:8084 localhost```
+
+```go run peer/main.go -p 8084 -n localhost:8085 localhost```
+
+```go run peer/main.go -p 8085 localhost```
+
+```go run peer/main.go -p 8086 -n localhost:8084 localhost```
+

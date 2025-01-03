@@ -42,6 +42,24 @@ if a peer detects that the previous connection lo longer exists
 it will wait 30 seconds for them to reconnect, after which it will exit.
 
 
-## Notes
+### Usage example
 
-The program is set up to turn it self off after 2 minutes. Furthermore, if a peer
+This example includes 5 peers and a server, all running in the same machine
+
+Turn the server on:
+
+```go run /server/main.go```
+
+Turn 4 peers on:
+```go run peer/main.go -p 8081 -n 8082 localhost```
+
+```go run peer/main.go -p 8082 -n 8083 localhost```
+
+```go run peer/main.go -p 8083 -n 8084 localhost```
+
+```go run peer/main.go -p 8084 -n 8085 localhost```
+
+Turn the injector and the then the final peer:
+
+```go run injector/main.go localhost:8081 && go run peer/main.go -p 8085 -n 8081 localhost```
+
