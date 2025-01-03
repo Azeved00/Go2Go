@@ -23,9 +23,9 @@ func main() {
 
     if len(args) < 1 {
   		fmt.Println("Error: a required parameter is missing.")
-	        fmt.Println("Usage: " + os.Args[0] + " <machine addr>")
+	    fmt.Println("Usage: " + os.Args[0] + " <machine addr>")
 		os.Exit(1)
-	    }
+	}
 							       
 	    p := peer.New(args[0], strconv.Itoa(*peer_port))
     fmt.Println("Created peer")

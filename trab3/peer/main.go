@@ -20,7 +20,7 @@ func main() {
 
 	if len(args) < 1 {
 		fmt.Println("Error: A required parameter is missing.")
-		fmt.Println("Usage: " + os.Args[0] + " <addr of this machine")
+		fmt.Println("Usage: " + os.Args[0] + " <addr of this machine>")
 		os.Exit(1)
 	}
 

@@ -12,5 +12,13 @@ these are, respectivelly, in the folders [trab1](./trab1) [trab2](./trab2) and [
 
 ## How To Run
 
-In each of the folders there is a script, `runner.sh`, that sets up the network and starts all the peers.
-Do note that the script uses `tmux` to run the peers in different panes.
+In each of the folders there is a script, `runner.sh`, that sets up the network and 
+starts all the peers locally, there is also a script `remote_runner.sh` that sets up
+a network compromised of peers in different machines.
+
+For more information in each of these algorithms, 
+go check the readme included in each of the folders.
+
+### Note
+The scripts use `tmux` to run the peers in different panes, same window.
+
