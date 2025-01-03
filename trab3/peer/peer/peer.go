@@ -18,12 +18,12 @@ const (
     lambda = 0.2
 )
 var peer_addresses = [6]string{
-    "localhost:8081", 
-    "localhost:8082", 
-    "localhost:8083", 
-    "localhost:8084", 
-    "localhost:8085", 
-    "localhost:8086", 
+    "L802.alunos.dcc.fc.up.pt:8180", 
+    "L803.alunos.dcc.fc.up.pt:8180",
+    "L804.alunos.dcc.fc.up.pt:8180",
+    "L805.alunos.dcc.fc.up.pt:8180",
+    "L806.alunos.dcc.fc.up.pt:8180",
+    "L807.alunos.dcc.fc.up.pt:8180",
 }
 var words = []string{
 	"apple", "luminous", "gravel", "serenity", "ocean", "thunder",
@@ -53,7 +53,7 @@ func (p *Peer) Close() {
 // the 'port' parameter is fo r
 // waits for a peer to be connected to it
 // waits to be connected to a peer
-func New(port string) *Peer {
+func New(addr string, port string) *Peer {
     fmt.Println("Starting " + connType + " peer on port " + port)
 
     //set up prev connection
@@ -73,7 +73,7 @@ func New(port string) *Peer {
         rng: rng,
         self_port: port, 
         listener: l, 
-        clock: lamport.NewLamportClock("0.0.0.0:"+port),
+	clock: lamport.NewLamportClock(addr+":"+port),
         conns: NewConnMap(),
     }
     for _, addr := range peer_addresses {

@@ -16,15 +16,15 @@ const (
 
 func main() {
 	peer_port := flag.Int("p", default_peer_port, "Port where peer will listen")
-    next_peer_port := flag.Int("n", default_peer_port, "Port wich this peer will connect to")
-    server_addr := flag.String("s", default_server_addr, "Address of the server")
+    	next_peer_port := flag.Int("n", default_peer_port, "Port wich this peer will connect to")
+    	server_addr := flag.String("s", default_server_addr, "Address of the server")
 	flag.Parse()
 
 	args := flag.Args()
 
     if len(args) < 1 {
-		fmt.Println("Error: Two required parameters are missing.")
-        fmt.Println("Usage: " + os.Args[0] + " <addr to connect to>")
+		fmt.Println("Error: A required parameters is missing.")
+        	fmt.Println("Usage: " + os.Args[0] + " <addr to connect to>")
 		os.Exit(1)
     }
 
@@ -45,7 +45,7 @@ func main() {
     go p.Loop()
     fmt.Println("Token Loop Initiated")
 
-    time.Sleep(time.Duration(3 * time.Minute))
+    time.Sleep(time.Duration(2 * time.Minute))
     fmt.Println("Program finished time limit, exiting")
     return 
 }

@@ -41,7 +41,7 @@ func (p *Peer) Close() {
 // the 'port' parameter is fo r
 // waits for a peer to be connected to it
 // waits to be connected to a peer
-func New(port string) Peer {
+func New(addr string, port string) Peer {
     fmt.Println("Starting " + connType + " peer on port " + port)
 
     //set up prev connection
@@ -62,7 +62,7 @@ func New(port string) Peer {
         rng: rng,
         self_port: port, 
         listener: l, 
-        peer_map: pmap.NewPeerMap("localhost:"+port),
+	peer_map: pmap.NewPeerMap(addr+":"+port),
         conns: map[string]net.Conn{},
     }
 }
@@ -87,8 +87,8 @@ func (p *Peer) ConnectTo(next_addr string) {
 
 
         if time.Now().After(ts) { 
-            fmt.Println("Connection Timed out, exiting program")
-            os.Exit(0) 
+            fmt.Println("Connection Timed out, stop trying to connect")
+	    return
         }
     }
 
@@ -148,13 +148,13 @@ func (p *Peer) Poison() {
         }
 
         keys := make([]string, 0, len(p.conns))
-        fmt.Println("Conns to send:", keys)
         for key := range p.conns {
             keys = append(keys, key)
         }
         if len(keys) <= 0 {
             continue
         }
+        fmt.Println("Conns to send:", keys)
 
         randomIndex := p.rng.Intn(len(keys))
         addr := keys[randomIndex]
@@ -166,6 +166,7 @@ func (p *Peer) Poison() {
         _, err = conn.Write(message)
         if err != nil {
             fmt.Printf("Failed to send message %v\n", err)
+		delete(p.conns, addr)
             continue
         }
 

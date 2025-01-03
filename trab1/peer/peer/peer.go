@@ -35,10 +35,15 @@ type Peer struct {
 
     next_addr   string
     next_conn   net.Conn  
+
+    finishing   bool
 }
 
 func (p *Peer) Close() {
     fmt.Println("exiting")
+
+    p.finishing = true
+    time.Sleep(time.Duration(10 * time.Second))
 
     p.next_conn.Close()
     p.prev_conn.Close()
@@ -69,7 +74,7 @@ func New(port string, next_addr string, server_addr string) Peer {
             break
         }
         time.Sleep(2 * time.Second)
-        fmt.Println("Error connecting:", err.Error())
+        fmt.Println("Error connecting to server:", err.Error())
     }
 
     //setup poisson
@@ -88,6 +93,7 @@ func New(port string, next_addr string, server_addr string) Peer {
         prev_conn: nil,
         next_addr: next_addr, 
         next_conn:nil,
+	finishing: false,
     }
 }
 
@@ -137,6 +143,9 @@ func (p *Peer) ConnectPrev() {
 // Infinitly receives message from someone connected to us
 func (p *Peer) Loop()  {
     for {
+	if finishing{
+		break
+	}
 
         if p.prev_conn == nil {
             p.ConnectPrev()
@@ -195,6 +204,9 @@ func (p *Peer) Loop()  {
 
 func (p *Peer) Poison() {
     for {
+	if finishing {
+		break
+	}
         cmd := p.GenCommand()
         p.mu.Lock()
         p.req = append(p.req, cmd)
