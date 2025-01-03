@@ -141,6 +141,7 @@ func (p *Peer) handleCon(conn net.Conn) {
 
 func (p *Peer) Poison() {
     for {
+        p.peer_map.BookKeep()
         message, err := p.peer_map.Serialize()
         if err != nil {
             fmt.Printf("%s\n",err)

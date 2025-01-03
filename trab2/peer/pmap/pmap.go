@@ -11,6 +11,7 @@ type PMap struct {
    m map[string]time.Time
    Addr string
 }
+const time_to_delete = 20
 
 // Merge combines two StringToTimestampMap structures.
 // If the same key exists in both, the latest timestamp is used.
@@ -108,4 +109,13 @@ func (m *PMap) UpdatePeer(peer string) {
 }
 func (m *PMap) DeletePeer(peer string) {
     defer  delete((*m).m, peer)
+}
+func (m *PMap) BookKeep() {
+	now := time.Now()
+	for key, timestamp := range  (*m).m {
+		// Check if X seconds have passed
+		if now.Sub(timestamp).Seconds() > time_to_delete {
+			delete((*m).m, key)
+		}
+	}
 }

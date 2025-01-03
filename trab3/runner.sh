@@ -3,12 +3,12 @@
 work_dir="$PWD/trab3"
 go="GOWORK=\"$work_dir/go.work\" go"
 
-peer0="$go run $work_dir/peer/main.go -p 8081"
-peer1="$go run $work_dir/peer/main.go -p 8082"
-peer2="$go run $work_dir/peer/main.go -p 8083"
-peer3="$go run $work_dir/peer/main.go -p 8084"
-peer5="$go run $work_dir/peer/main.go -p 8085"
-peer4="$go run $work_dir/peer/main.go -p 8086"
+peer0="$go run $work_dir/peer/main.go -p 8081 localhost"
+peer1="$go run $work_dir/peer/main.go -p 8082 localhost"
+peer2="$go run $work_dir/peer/main.go -p 8083 localhost"
+peer3="$go run $work_dir/peer/main.go -p 8084 localhost"
+peer5="$go run $work_dir/peer/main.go -p 8085 localhost"
+peer4="$go run $work_dir/peer/main.go -p 8086 localhost"
 
 # Check the number of panes in the current window
 pane_count=$(tmux list-panes | wc -l)
@@ -27,7 +27,7 @@ fi
 
 
 # Send the commands to each of the 3 panes
-tmux send-keys -t 6 "$peer0" Enter
+tmux send-keys -t 0 "$peer0" Enter
 tmux send-keys -t 1 "$peer1" Enter
 tmux send-keys -t 2 "$peer2" Enter
 tmux send-keys -t 3 "$peer3" Enter
