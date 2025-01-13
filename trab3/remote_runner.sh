@@ -3,12 +3,12 @@
 work_dir="~/Dev/Go2Go/trab3"
 
 
-LM2="go run peer/main.go L802.alunos.dcc.fc.up.pt"
-LM3="go run peer/main.go L803.alunos.dcc.fc.up.pt"
-LM4="go run peer/main.go L804.alunos.dcc.fc.up.pt"
-LM5="go run peer/main.go L805.alunos.dcc.fc.up.pt"
-LM6="go run peer/main.go L806.alunos.dcc.fc.up.pt"
-LM7="go run peer/main.go L807.alunos.dcc.fc.up.pt"
+LM2="go run peer/main.go L1202.alunos.dcc.fc.up.pt"
+LM3="go run peer/main.go L1203.alunos.dcc.fc.up.pt"
+LM4="go run peer/main.go L1204.alunos.dcc.fc.up.pt"
+LM5="go run peer/main.go L1205.alunos.dcc.fc.up.pt"
+LM6="go run peer/main.go L1206.alunos.dcc.fc.up.pt"
+LM7="go run peer/main.go L1207.alunos.dcc.fc.up.pt"
 
 
 # Send the commands to each of the 3 panes

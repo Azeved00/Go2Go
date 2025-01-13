@@ -143,7 +143,7 @@ func (p *Peer) ConnectPrev() {
 // Infinitly receives message from someone connected to us
 func (p *Peer) Loop()  {
     for {
-	if finishing{
+	if p.finishing{
 		break
 	}
 
@@ -204,7 +204,7 @@ func (p *Peer) Loop()  {
 
 func (p *Peer) Poison() {
     for {
-	if finishing {
+	if p.finishing {
 		break
 	}
         cmd := p.GenCommand()

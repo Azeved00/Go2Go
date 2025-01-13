@@ -3,12 +3,12 @@
 work_dir="$PWD/trab3"
 go="GOWORK=\"$work_dir/go.work\" go"
 
-peer0="$go run $work_dir/peer/main.go -p 8081 localhost"
-peer1="$go run $work_dir/peer/main.go -p 8082 localhost"
-peer2="$go run $work_dir/peer/main.go -p 8083 localhost"
-peer3="$go run $work_dir/peer/main.go -p 8084 localhost"
-peer5="$go run $work_dir/peer/main.go -p 8085 localhost"
-peer4="$go run $work_dir/peer/main.go -p 8086 localhost"
+peer0="$go run $work_dir/peer/main.go -p 8181 localhost"
+peer1="$go run $work_dir/peer/main.go -p 8182 localhost"
+peer2="$go run $work_dir/peer/main.go -p 8183 localhost"
+peer3="$go run $work_dir/peer/main.go -p 8184 localhost"
+peer5="$go run $work_dir/peer/main.go -p 8185 localhost"
+peer4="$go run $work_dir/peer/main.go -p 8186 localhost"
 
 # Check the number of panes in the current window
 pane_count=$(tmux list-panes | wc -l)

@@ -18,12 +18,12 @@ const (
     lambda = 0.2
 )
 var peer_addresses = [6]string{
-    "L802.alunos.dcc.fc.up.pt:8180", 
-    "L803.alunos.dcc.fc.up.pt:8180",
-    "L804.alunos.dcc.fc.up.pt:8180",
-    "L805.alunos.dcc.fc.up.pt:8180",
-    "L806.alunos.dcc.fc.up.pt:8180",
-    "L807.alunos.dcc.fc.up.pt:8180",
+    "L1202.alunos.dcc.fc.up.pt:8180", 
+    "L1203.alunos.dcc.fc.up.pt:8180",
+    "L1204.alunos.dcc.fc.up.pt:8180",
+    "L1205.alunos.dcc.fc.up.pt:8180",
+    "L1206.alunos.dcc.fc.up.pt:8180",
+    "L1207.alunos.dcc.fc.up.pt:8180",
 }
 var words = []string{
 	"apple", "luminous", "gravel", "serenity", "ocean", "thunder",
